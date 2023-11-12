@@ -20,6 +20,8 @@ public class Paste {
     @Enumerated(EnumType.STRING)
     private Exposure exposure;
 
+    @Column(nullable = false, updatable = false)
+
     private String password;
     private String title;
 

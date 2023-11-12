@@ -29,13 +29,7 @@ public class PasteController {
 
 
     @ExceptionHandler(ResponseStatusException.class)
-    public final ResponseEntity<ErrorResponse> handleBadRequestException(ResponseStatusException ex, WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
-                ex.getReason()
-        );
-        return new ResponseEntity<>(errorResponse, ex.getStatusCode());
-    }
+
     @PostMapping
     public ResponseEntity<Object> createPaste(@RequestBody CreatePasteDTO createPasteDTO) {
         try {
@@ -45,7 +39,7 @@ public class PasteController {
 
             ErrorResponse errorResponse = new ErrorResponse(
                     LocalDateTime.now(),
-                    "Error creating paste"
+                    ex.getMessage()
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }

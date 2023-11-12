@@ -51,18 +51,12 @@ public class PasteService {
 
     public PasteDTO createPaste(CreatePasteDTO createDto) {
 
-        System.out.println(createDto.getExposure());
-        if (createDto.getExposure() != Exposure.PUBLIC && createDto.getExposure() != Exposure.PRIVATE && createDto.getExposure() != Exposure.UNLISTED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exposure must be PUBLIC, PRIVATE, or UNLISTED");
-        }
-        if (createDto.getExposure() == Exposure.PRIVATE && (createDto.getPassword() == null || createDto.getPassword().isEmpty())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required for private pastes");
-        }
         Paste paste = new Paste();
         paste.setUpdatedAt(LocalDateTime.now());
         paste.setCreatedAt(LocalDateTime.now());
         paste.setExposure(createDto.getExposure() != null ? createDto.getExposure() : Exposure.PUBLIC);
         paste.setTitle(createDto.getTitle());
+        paste.setPassword(generateHashPassword(paste));
         paste.setContent(createDto.getContent());
         paste.setExposure(createDto.getExposure());
         paste.setExpirationDate(createDto.getExpirationDate());
@@ -81,6 +75,15 @@ public class PasteService {
                 .filter(paste -> paste.getExpirationDate() == null || paste.getExpirationDate().isAfter(now))
                 .toList();
 
+        return pastes.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    public PasteDTO getPaste(String url) {
+        LocalDateTime now = LocalDateTime.now();
+        Paste paste = pasteRepository.findByUrl(url).get();
+        if(paste.getExpirationDate().isAfter(now)) {
+            throw new RuntimeException("Failed");
+        }
         return pastes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
