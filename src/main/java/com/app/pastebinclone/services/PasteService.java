@@ -1,10 +1,13 @@
 package com.app.pastebinclone.services;
 import com.app.pastebinclone.DTOs.CreatePasteDTO;
 import com.app.pastebinclone.DTOs.PasteDTO;
+import com.app.pastebinclone.models.Exposure;
 import com.app.pastebinclone.models.Paste;
 import com.app.pastebinclone.repository.PasteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,6 +31,11 @@ public class PasteService {
         return paste.map(this::convertToDTO);
     }
 
+    public Optional<PasteDTO> getPasteByUrl(String url) {
+        Optional<Paste> paste = pasteRepository.findByUrl(url);
+        return paste.map(this::convertToDTO);
+    }
+
     private PasteDTO convertToDTO(Paste paste) {
         PasteDTO dto = new PasteDTO();
         dto.setId(paste.getId());
@@ -42,22 +50,37 @@ public class PasteService {
     }
 
     public PasteDTO createPaste(CreatePasteDTO createDto) {
+
+        System.out.println(createDto.getExposure());
+        if (createDto.getExposure() != Exposure.PUBLIC && createDto.getExposure() != Exposure.PRIVATE && createDto.getExposure() != Exposure.UNLISTED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exposure must be PUBLIC, PRIVATE, or UNLISTED");
+        }
+        if (createDto.getExposure() == Exposure.PRIVATE && (createDto.getPassword() == null || createDto.getPassword().isEmpty())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required for private pastes");
+        }
         Paste paste = new Paste();
         paste.setUpdatedAt(LocalDateTime.now());
         paste.setCreatedAt(LocalDateTime.now());
+        paste.setExposure(createDto.getExposure() != null ? createDto.getExposure() : Exposure.PUBLIC);
         paste.setTitle(createDto.getTitle());
         paste.setContent(createDto.getContent());
         paste.setExposure(createDto.getExposure());
         paste.setExpirationDate(createDto.getExpirationDate());
-        paste.setUrl(createDto.getUrl());
         paste.setUrl(generateShortUrl(paste));
+
+
         Paste savedPaste = pasteRepository.save(paste);
         return convertToDTO(savedPaste);
     }
 
-
     public List<PasteDTO> getAllPastes() {
-        List<Paste> pastes = pasteRepository.findAll();
+        LocalDateTime now = LocalDateTime.now();
+        List<Paste> pastes = pasteRepository.findAll()
+                .stream()
+                .filter(paste -> paste.getExposure() == Exposure.PUBLIC)
+                .filter(paste -> paste.getExpirationDate() == null || paste.getExpirationDate().isAfter(now))
+                .toList();
+
         return pastes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -74,6 +97,24 @@ public class PasteService {
             return sb.substring(0, 10);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Failed to generate URL", e);
+        }
+    }
+
+    private String generateHashPassword(Paste paste) {
+        String originalString = paste.getPassword() + paste.getCreatedAt();
+
+
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(originalString.getBytes());
+            byte[] digest = md.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.substring(0, 10);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Failed", e);
         }
     }
 }

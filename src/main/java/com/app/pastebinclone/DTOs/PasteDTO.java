@@ -9,6 +9,7 @@ public class PasteDTO {
     private String title;
     private String content;
     private Exposure exposure;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime expirationDate;
@@ -77,4 +78,5 @@ public class PasteDTO {
     public void setUrl(String url) {
         this.url = url;
     }
+
 }

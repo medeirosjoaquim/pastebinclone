@@ -20,11 +20,12 @@ public class Paste {
     @Enumerated(EnumType.STRING)
     private Exposure exposure;
 
+    private String password;
     private String title;
 
     private LocalDateTime expirationDate;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String content;
     @Column(nullable = false, updatable = false)
     private String url;
@@ -101,5 +102,13 @@ public class Paste {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

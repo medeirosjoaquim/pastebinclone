@@ -1,15 +1,29 @@
 package com.app.pastebinclone.DTOs;
+
 import com.app.pastebinclone.models.Exposure;
 
 import java.time.LocalDateTime;
 
 public class CreatePasteDTO {
+    private Long id;
     private String title;
     private String content;
-
-    private String url;
     private Exposure exposure;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private LocalDateTime expirationDate;
+    private String url;
+
+    private String password;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getTitle() {
         return title;
@@ -35,6 +49,22 @@ public class CreatePasteDTO {
         this.exposure = exposure;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public LocalDateTime getExpirationDate() {
         return expirationDate;
     }
@@ -49,5 +79,13 @@ public class CreatePasteDTO {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }
