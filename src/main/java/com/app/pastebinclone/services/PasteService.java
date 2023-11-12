@@ -80,11 +80,35 @@ public class PasteService {
 
     public PasteDTO getPaste(String url) {
         LocalDateTime now = LocalDateTime.now();
-        Paste paste = pasteRepository.findByUrl(url).get();
-        if(paste.getExpirationDate().isAfter(now)) {
-            throw new RuntimeException("Failed");
+        Optional<Paste> optionalPaste = pasteRepository.findByUrl(url);
+
+        if (!optionalPaste.isPresent()) {
+            throw new RuntimeException("Paste not found");
         }
-        return pastes.stream().map(this::convertToDTO).collect(Collectors.toList());
+
+        Paste paste = optionalPaste.get();
+        if (paste.getExpirationDate() != null && paste.getExpirationDate().isBefore(now)) {
+            throw new RuntimeException("Paste is expired");
+        }
+
+        return this.convertToDTO(paste);
+    }
+
+    public PasteDTO deletePaste(String url) {
+        LocalDateTime now = LocalDateTime.now();
+        Optional<Paste> optionalPaste = pasteRepository.findByUrl(url);
+
+        if (!optionalPaste.isPresent()) {
+            throw new RuntimeException("Paste not found");
+        }
+
+        Paste paste = optionalPaste.get();
+        if (paste.getExpirationDate() != null && paste.getExpirationDate().isBefore(now)) {
+            throw new RuntimeException("Paste is expired");
+        }
+
+        pasteRepository.delete(paste);
+        return this.convertToDTO(paste);
     }
 
     private String generateShortUrl(Paste paste) {
