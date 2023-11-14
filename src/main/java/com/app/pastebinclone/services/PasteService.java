@@ -7,6 +7,7 @@ import com.app.pastebinclone.repository.PasteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.MessageDigest;
@@ -94,21 +95,37 @@ public class PasteService {
         return this.convertToDTO(paste);
     }
 
-    public PasteDTO deletePaste(String url) {
-        LocalDateTime now = LocalDateTime.now();
+    @Transactional
+    public void deletePaste(String url, String providedPassword) {
         Optional<Paste> optionalPaste = pasteRepository.findByUrl(url);
 
-        if (!optionalPaste.isPresent()) {
+        if (optionalPaste.isEmpty()) {
             throw new RuntimeException("Paste not found");
         }
 
         Paste paste = optionalPaste.get();
-        if (paste.getExpirationDate() != null && paste.getExpirationDate().isBefore(now)) {
-            throw new RuntimeException("Paste is expired");
+        if (!isPasswordMatch(providedPassword, paste.getPassword())) {
+            throw new RuntimeException("Invalid password");
         }
 
         pasteRepository.delete(paste);
-        return this.convertToDTO(paste);
+    }
+
+    private boolean isPasswordMatch(String providedPassword, String storedPasswordHash) {
+        // Assuming storedPasswordHash is a SHA-256 hash of the original password
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(providedPassword.getBytes());
+            byte[] digestedBytes = md.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digestedBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            String hashedProvidedPassword = sb.toString();
+            return hashedProvidedPassword.equals(storedPasswordHash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Password hashing algorithm not found", e);
+        }
     }
 
     private String generateShortUrl(Paste paste) {

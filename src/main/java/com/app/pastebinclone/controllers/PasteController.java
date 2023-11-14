@@ -1,6 +1,7 @@
 package com.app.pastebinclone.controllers;
 
 import com.app.pastebinclone.DTOs.CreatePasteDTO;
+import com.app.pastebinclone.DTOs.DeletePasteDTO;
 import com.app.pastebinclone.DTOs.PasteDTO;
 import com.app.pastebinclone.models.ErrorResponse;
 import com.app.pastebinclone.services.PasteService;
@@ -57,4 +58,14 @@ public class PasteController {
         Optional<PasteDTO> pasteDto = pasteService.getPasteByUrl(url);
         return pasteDto.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deletePaste(@RequestBody DeletePasteDTO deletePasteDTO) {
+        try {
+            pasteService.deletePaste(deletePasteDTO.getUrl(), deletePasteDTO.getPassword());
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }
