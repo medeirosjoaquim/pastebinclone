@@ -57,7 +57,7 @@ public class PasteService {
         paste.setCreatedAt(LocalDateTime.now());
         paste.setExposure(createDto.getExposure() != null ? createDto.getExposure() : Exposure.PUBLIC);
         paste.setTitle(createDto.getTitle());
-        paste.setPassword(generateHashPassword(paste));
+        paste.setPassword(generateHashPassword(createDto.getPassword()));
         paste.setContent(createDto.getContent());
         paste.setExposure(createDto.getExposure());
         paste.setExpirationDate(createDto.getExpirationDate());
@@ -70,11 +70,9 @@ public class PasteService {
 
     public List<PasteDTO> getAllPastes() {
         LocalDateTime now = LocalDateTime.now();
-        List<Paste> pastes = pasteRepository.findAll()
-                .stream()
-                .filter(paste -> paste.getExposure() == Exposure.PUBLIC)
-                .filter(paste -> paste.getExpirationDate() == null || paste.getExpirationDate().isAfter(now))
-                .toList();
+
+        List<Paste> pastes =  pasteRepository
+                .findNotExpiredAndPublicPastes(LocalDateTime.now(), Exposure.PUBLIC);
 
         return pastes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
@@ -104,29 +102,18 @@ public class PasteService {
         }
 
         Paste paste = optionalPaste.get();
-        if (!isPasswordMatch(providedPassword, paste.getPassword())) {
-            throw new RuntimeException("Invalid password");
+        System.out.println(paste.getPassword());
+        System.out.println(providedPassword);
+        System.out.println(generateHashPassword(providedPassword)
+);
+        if (!paste.getPassword().equals(generateHashPassword(providedPassword))) {
+            throw new RuntimeException("Wrong password");
         }
 
         pasteRepository.delete(paste);
     }
 
-    private boolean isPasswordMatch(String providedPassword, String storedPasswordHash) {
-        // Assuming storedPasswordHash is a SHA-256 hash of the original password
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update(providedPassword.getBytes());
-            byte[] digestedBytes = md.digest();
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digestedBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            String hashedProvidedPassword = sb.toString();
-            return hashedProvidedPassword.equals(storedPasswordHash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Password hashing algorithm not found", e);
-        }
-    }
+
 
     private String generateShortUrl(Paste paste) {
         String originalString = paste.getTitle() + paste.getContent() + LocalDateTime.now();
@@ -144,19 +131,16 @@ public class PasteService {
         }
     }
 
-    private String generateHashPassword(Paste paste) {
-        String originalString = paste.getPassword() + paste.getCreatedAt();
-
-
+    private String generateHashPassword(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update(originalString.getBytes());
+            md.update(password.getBytes());
             byte[] digest = md.digest();
             StringBuilder sb = new StringBuilder();
             for (byte b : digest) {
                 sb.append(String.format("%02x", b));
             }
-            return sb.substring(0, 10);
+            return sb.toString();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Failed", e);
         }

@@ -58,7 +58,7 @@ public class PasteController {
         Optional<PasteDTO> pasteDto = pasteService.getPasteByUrl(url);
         return pasteDto.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
-    @DeleteMapping("/delete")
+    @DeleteMapping
     public ResponseEntity<?> deletePaste(@RequestBody DeletePasteDTO deletePasteDTO) {
         try {
             pasteService.deletePaste(deletePasteDTO.getUrl(), deletePasteDTO.getPassword());
