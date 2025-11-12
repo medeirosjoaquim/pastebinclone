@@ -6,6 +6,7 @@ import com.app.pastebinclone.models.Paste;
 import com.app.pastebinclone.repository.PasteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,10 +22,12 @@ import java.util.stream.Collectors;
 public class PasteService {
 
     private final PasteRepository pasteRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public PasteService(PasteRepository pasteRepository) {
+    public PasteService(PasteRepository pasteRepository, PasswordEncoder passwordEncoder) {
         this.pasteRepository = pasteRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Optional<PasteDTO> getPasteById(Long id) {
@@ -57,7 +60,7 @@ public class PasteService {
         paste.setCreatedAt(LocalDateTime.now());
         paste.setExposure(createDto.getExposure() != null ? createDto.getExposure() : Exposure.PUBLIC);
         paste.setTitle(createDto.getTitle());
-        paste.setPassword(generateHashPassword(createDto.getPassword()));
+        paste.setPassword(passwordEncoder.encode(createDto.getPassword()));
         paste.setContent(createDto.getContent());
         paste.setExposure(createDto.getExposure());
         paste.setExpirationDate(createDto.getExpirationDate());
@@ -102,11 +105,7 @@ public class PasteService {
         }
 
         Paste paste = optionalPaste.get();
-        System.out.println(paste.getPassword());
-        System.out.println(providedPassword);
-        System.out.println(generateHashPassword(providedPassword)
-);
-        if (!paste.getPassword().equals(generateHashPassword(providedPassword))) {
+        if (!passwordEncoder.matches(providedPassword, paste.getPassword())) {
             throw new RuntimeException("Wrong password");
         }
 
@@ -128,21 +127,6 @@ public class PasteService {
             return sb.substring(0, 10);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Failed to generate URL", e);
-        }
-    }
-
-    private String generateHashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update(password.getBytes());
-            byte[] digest = md.digest();
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Failed", e);
         }
     }
 }
