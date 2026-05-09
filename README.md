@@ -16,21 +16,22 @@ Built as a portfolio piece — the goal is for the code to look the way a mid-si
 
 ## Quickstart
 
-The whole backend (app + Postgres) runs with one command:
+The whole stack — Postgres, Spring Boot backend, and the built Angular frontend behind nginx — runs with one command:
 
 ```bash
 docker compose up --build
 ```
 
-Backend listens on `http://localhost:8080`, Postgres on `localhost:5433`.
+- Frontend at `http://localhost:4200`
+- Backend at `http://localhost:8080`
+- Postgres at `localhost:5433` (data persisted in named volume `pastebinclone_pastebin-pgdata`)
 
-For the Angular frontend:
+If you'd rather run the frontend in dev mode (live reload) against the dockerized backend:
 
 ```bash
-cd frontend && npm install && npm start
+docker compose up backend
+cd frontend && npm install && npm start  # http://localhost:4200
 ```
-
-UI is at `http://localhost:4200`, talks to the backend at `http://localhost:8080/pastes`.
 
 ## API
 
