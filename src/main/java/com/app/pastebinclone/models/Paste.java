@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class Paste {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, updatable = false)
@@ -20,8 +20,6 @@ public class Paste {
     @Enumerated(EnumType.STRING)
     private Exposure exposure;
 
-    @Column(nullable = false, updatable = false)
-
     private String password;
     private String title;
 
@@ -29,12 +27,22 @@ public class Paste {
 
     @Column(columnDefinition = "TEXT")
     private String content;
-    @Column(nullable = false, updatable = false)
+
+    @Column(nullable = false, updatable = false, unique = true)
     private String url;
+
+    private String language;
+
+    @Column(nullable = false)
+    private long views = 0;
+
+    @Column(nullable = false)
+    private boolean burnAfterRead = false;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
@@ -112,5 +120,29 @@ public class Paste {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public long getViews() {
+        return views;
+    }
+
+    public void setViews(long views) {
+        this.views = views;
+    }
+
+    public boolean isBurnAfterRead() {
+        return burnAfterRead;
+    }
+
+    public void setBurnAfterRead(boolean burnAfterRead) {
+        this.burnAfterRead = burnAfterRead;
     }
 }
