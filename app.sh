@@ -16,6 +16,7 @@ NC='\033[0m' # No Color
 APP_NAME="pastebinclone"
 DEBUG_PORT=5005
 APP_PORT=8080
+DB_PORT=5433
 
 # Helper functions
 print_info() {
@@ -37,11 +38,11 @@ print_warning() {
 # Check if PostgreSQL is running
 check_postgres() {
     print_info "Checking PostgreSQL connection..."
-    if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
+    if pg_isready -h localhost -p $DB_PORT > /dev/null 2>&1; then
         print_success "PostgreSQL is running"
         return 0
     else
-        print_warning "PostgreSQL may not be running on localhost:5432"
+        print_warning "PostgreSQL may not be running on localhost:$DB_PORT"
         print_warning "Please ensure your database is running before starting the app"
         return 1
     fi
@@ -177,7 +178,7 @@ show_help() {
     echo "  ./app.sh test             # Run tests"
     echo ""
     echo "Database Configuration:"
-    echo "  URL: jdbc:postgresql://localhost:5432/pastebin"
+    echo "  URL: jdbc:postgresql://localhost:$DB_PORT/pastebin"
     echo "  Username: postgres"
     echo "  Password: postgres"
     echo ""
