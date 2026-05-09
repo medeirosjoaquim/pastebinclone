@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PastesService } from '../pastes.service';
@@ -9,9 +9,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 @Component({
   selector: 'app-create-paste',
   standalone: true,
@@ -23,13 +20,11 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     MatIconModule,
     MatSelectModule,
     MatButtonModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
   ],
   templateUrl: './create-paste.component.html',
   styleUrl: './create-paste.component.css',
 })
-export class CreatePasteComponent {
+export class CreatePasteComponent implements OnInit {
   constructor(private pastesService: PastesService) {}
 
   @Output() pasteCreated = new EventEmitter<Paste>();
@@ -39,10 +34,27 @@ export class CreatePasteComponent {
     content: new FormControl('', [Validators.required]),
     exposure: new FormControl<Exposure>(Exposure.PUBLIC, [Validators.required]),
     expirationDate: new FormControl(''),
-    password: new FormControl('', [Validators.required, Validators.minLength(4)]),
+    password: new FormControl(''),
   });
 
   passwordFieldType: string = 'password';
+
+  ngOnInit(): void {
+    this.pasteForm.controls.exposure.valueChanges.subscribe((exposure) => {
+      const passwordControl = this.pasteForm.controls.password;
+      if (exposure === Exposure.PRIVATE) {
+        passwordControl.setValidators([Validators.required, Validators.minLength(4)]);
+      } else {
+        passwordControl.clearValidators();
+        passwordControl.setValue('');
+      }
+      passwordControl.updateValueAndValidity();
+    });
+  }
+
+  isPrivate(): boolean {
+    return this.pasteForm.value.exposure === Exposure.PRIVATE;
+  }
 
   togglePasswordVisibility(): void {
     this.passwordFieldType =
@@ -65,25 +77,29 @@ export class CreatePasteComponent {
 
   onSubmit() {
     if (this.pasteForm.invalid) {
-      alert('Please fill in all required fields:\n- Title\n- Content\n- Password (minimum 4 characters)');
+      alert('Please fill in all required fields:\n- Title\n- Content\n\nPassword is optional — required only if you want to delete or update the paste later.');
       return;
     }
     const expiration = this.pasteForm.value.expirationDate
       ? new Date(this.pasteForm.value.expirationDate).toISOString()
       : null;
+    const password = this.pasteForm.value.password?.trim() || null;
     const formValue: CreatePaste = {
       title: this.pasteForm.value.title!,
       content: this.pasteForm.value.content!,
       exposure: this.pasteForm.value.exposure!,
       expirationDate: expiration,
-      password: this.pasteForm.value.password!,
+      password,
     };
 
     this.pastesService.createPaste(formValue).subscribe({
       next: (newPaste) => {
         this.pasteCreated.emit(newPaste);
         const fullUrl = `${window.location.origin}/${newPaste.url}`;
-        alert(`Paste created successfully!\n\nURL: ${fullUrl}\n\nYou'll need your password to delete this paste.`);
+        const followUp = password
+          ? "You'll need your password to delete or update this paste."
+          : 'No password set — this paste cannot be deleted or updated.';
+        alert(`Paste created successfully!\n\nURL: ${fullUrl}\n\n${followUp}`);
         window.location.reload();
       },
       error: (error) => {

@@ -16,5 +16,5 @@ export interface CreatePaste {
   content: string;
   exposure: Exposure;
   expirationDate: string | null;
-  password: string;
+  password: string | null;
 }

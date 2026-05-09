@@ -48,33 +48,30 @@
       </mat-form-field>
     </div>
 
-    <!-- Expiration Date Field -->
+    <!-- Expiration Date + Time Field -->
     <div class="form-field form-field-half">
       <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Expiration Date</mat-label>
+        <mat-label>Expires at</mat-label>
         <input
           matInput
-          [matDatepicker]="picker"
+          type="datetime-local"
           formControlName="expirationDate"
-          placeholder="Select date"
         />
-        <mat-icon matPrefix>event</mat-icon>
-        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
+        <mat-icon matPrefix>schedule</mat-icon>
+        <mat-hint>Optional &mdash; date and time</mat-hint>
       </mat-form-field>
     </div>
   </div>
 
-  <!-- Password Field -->
-  <div class="form-field">
+  <!-- Password Field (only for private pastes) -->
+  <div class="form-field" *ngIf="isPrivate()">
     <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Password (Required)</mat-label>
+      <mat-label>Password</mat-label>
       <input
         matInput
         [type]="passwordFieldType"
         formControlName="password"
-        placeholder="Enter password to protect your paste"
-        required
+        placeholder="Password to view, update, or delete this paste"
       />
       <mat-icon matPrefix>key</mat-icon>
       <button
@@ -88,7 +85,7 @@
           passwordFieldType === "password" ? "visibility" : "visibility_off"
         }}</mat-icon>
       </button>
-      <mat-hint>Required for deletion. Keep it safe!</mat-hint>
+      <mat-hint>Required for private pastes &mdash; gates view, update, and delete.</mat-hint>
     </mat-form-field>
   </div>
 
