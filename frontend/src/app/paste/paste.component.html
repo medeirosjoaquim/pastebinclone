@@ -1,0 +1,104 @@
+<div *ngIf="pasteSignal()" class="paste-container">
+  <mat-card class="paste-card">
+    <!-- Header Section -->
+    <mat-card-header class="paste-header">
+      <mat-card-title class="paste-title">
+        <mat-icon class="title-icon">description</mat-icon>
+        {{ pasteSignal()?.title }}
+      </mat-card-title>
+    </mat-card-header>
+
+    <!-- Content Section -->
+    <mat-card-content>
+      <div class="content-section">
+        <div class="content-label">
+          <mat-icon>code</mat-icon>
+          <span>Content</span>
+        </div>
+        <div class="paste-content">
+          <pre>{{ pasteSignal()?.content }}</pre>
+        </div>
+      </div>
+
+      <!-- Metadata Section -->
+      <div class="metadata-section">
+        <h3 class="metadata-title">Paste Information</h3>
+        <div class="metadata-grid">
+          <div class="metadata-item">
+            <mat-icon class="metadata-icon">visibility</mat-icon>
+            <div class="metadata-details">
+              <span class="metadata-label">Exposure</span>
+              <span class="metadata-value">{{ pasteSignal()?.exposure }}</span>
+            </div>
+          </div>
+
+          <div class="metadata-item" *ngIf="pasteSignal()?.expirationDate">
+            <mat-icon class="metadata-icon">schedule</mat-icon>
+            <div class="metadata-details">
+              <span class="metadata-label">Expiration</span>
+              <span class="metadata-value">{{ pasteSignal()?.expirationDate | date: 'medium' }}</span>
+            </div>
+          </div>
+
+          <div class="metadata-item">
+            <mat-icon class="metadata-icon">event</mat-icon>
+            <div class="metadata-details">
+              <span class="metadata-label">Created</span>
+              <span class="metadata-value">{{ pasteSignal()?.createdAt | date: 'medium' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Section -->
+      <div class="delete-section">
+        <h3 class="delete-title">
+          <mat-icon>warning</mat-icon>
+          Danger Zone
+        </h3>
+        <form
+          [formGroup]="deletePasteForm"
+          (ngSubmit)="onSubmit()"
+          class="delete-form"
+        >
+          <mat-form-field appearance="fill" class="password-field">
+            <mat-label>Password</mat-label>
+            <input
+              matInput
+              [type]="passwordFieldType"
+              formControlName="password"
+              placeholder="Enter password to delete"
+            />
+            <mat-icon matPrefix>key</mat-icon>
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="togglePasswordVisibility()"
+              class="visibility-toggle"
+            >
+              <mat-icon>{{
+                passwordFieldType === "password" ? "visibility" : "visibility_off"
+              }}</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <button mat-raised-button color="warn" type="submit" class="delete-btn">
+            <mat-icon>delete</mat-icon>
+            Delete Paste
+          </button>
+        </form>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="!pasteSignal()" class="no-paste">
+  <mat-card class="error-card">
+    <mat-card-content>
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <h2>Paste Not Found</h2>
+      <p>This paste doesn't exist or may have expired.</p>
+    </mat-card-content>
+  </mat-card>
+</div>

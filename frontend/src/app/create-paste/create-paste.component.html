@@ -1,0 +1,102 @@
+<form [formGroup]="pasteForm" (ngSubmit)="onSubmit()" class="paste-form">
+  <!-- Title Field -->
+  <div class="form-field">
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Title</mat-label>
+      <input matInput formControlName="title" placeholder="Give your paste a title" />
+      <mat-icon matPrefix>title</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <!-- Content Field -->
+  <div class="form-field">
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Content</mat-label>
+      <textarea
+        matInput
+        formControlName="content"
+        placeholder="Paste your content here..."
+        rows="8"
+        class="content-textarea"
+      ></textarea>
+      <mat-icon matPrefix>description</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <!-- Two Column Row -->
+  <div class="form-row">
+    <!-- Exposure Field -->
+    <div class="form-field form-field-half">
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Exposure</mat-label>
+        <mat-select id="exposure" formControlName="exposure">
+          <mat-option value="PUBLIC">
+            <mat-icon>public</mat-icon>
+            Public
+          </mat-option>
+          <mat-option value="PRIVATE">
+            <mat-icon>lock</mat-icon>
+            Private
+          </mat-option>
+          <mat-option value="UNLISTED">
+            <mat-icon>link</mat-icon>
+            Unlisted
+          </mat-option>
+        </mat-select>
+        <mat-icon matPrefix>visibility</mat-icon>
+        <mat-hint>{{ getExposureHint() }}</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <!-- Expiration Date Field -->
+    <div class="form-field form-field-half">
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Expiration Date</mat-label>
+        <input
+          matInput
+          [matDatepicker]="picker"
+          formControlName="expirationDate"
+          placeholder="Select date"
+        />
+        <mat-icon matPrefix>event</mat-icon>
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- Password Field -->
+  <div class="form-field">
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Password (Required)</mat-label>
+      <input
+        matInput
+        [type]="passwordFieldType"
+        formControlName="password"
+        placeholder="Enter password to protect your paste"
+        required
+      />
+      <mat-icon matPrefix>key</mat-icon>
+      <button
+        mat-icon-button
+        matSuffix
+        (click)="togglePasswordVisibility()"
+        type="button"
+        class="visibility-toggle"
+      >
+        <mat-icon>{{
+          passwordFieldType === "password" ? "visibility" : "visibility_off"
+        }}</mat-icon>
+      </button>
+      <mat-hint>Required for deletion. Keep it safe!</mat-hint>
+    </mat-form-field>
+  </div>
+
+  <!-- Submit Button -->
+  <div class="form-actions">
+    <button mat-raised-button color="primary" type="submit" class="submit-btn">
+      <mat-icon>send</mat-icon>
+      Create Paste
+    </button>
+  </div>
+</form>

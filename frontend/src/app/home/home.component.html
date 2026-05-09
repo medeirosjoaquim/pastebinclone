@@ -1,0 +1,46 @@
+<div class="home-container">
+  <main class="main-content">
+    <div class="content-wrapper">
+      <div class="left-panel">
+        <div class="panel-content">
+          <div class="create-section">
+            <h2 class="section-title">Create New Paste</h2>
+            <app-create-paste
+              (pasteCreated)="onPasteCreated($event)"
+            ></app-create-paste>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="panel-header">
+          <h2 class="section-title">Public Pastes</h2>
+          <span class="paste-count">{{ pastesSignal().length }} pastes</span>
+        </div>
+
+        <div class="pastes-list">
+          <mat-card
+            *ngFor="let paste of pastesSignal()"
+            class="paste-card"
+            (click)="navigateToPaste(paste)"
+          >
+            <mat-card-header>
+              <mat-card-title class="paste-title">{{ paste.title }}</mat-card-title>
+              <mat-card-subtitle class="paste-preview">
+                {{ paste.content.substring(0, 60) }}...
+              </mat-card-subtitle>
+            </mat-card-header>
+            @if (paste.expirationDate) {
+            <mat-card-content class="paste-meta">
+              <span class="meta-item">
+                <mat-icon class="meta-icon">schedule</mat-icon>
+                Expires: {{ paste.expirationDate | date: 'short' }}
+              </span>
+            </mat-card-content>
+            }
+          </mat-card>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
