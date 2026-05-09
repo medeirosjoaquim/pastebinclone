@@ -1,10 +1,15 @@
 package com.app.pastebinclone.services;
+
 import com.app.pastebinclone.DTOs.CreatePasteDTO;
 import com.app.pastebinclone.DTOs.PasteDTO;
+import com.app.pastebinclone.DTOs.UpdatePasteDTO;
 import com.app.pastebinclone.models.Exposure;
 import com.app.pastebinclone.models.Paste;
 import com.app.pastebinclone.repository.PasteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,16 +18,19 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class PasteService {
 
+    private static final int URL_LENGTH = 10;
+    private static final int URL_COLLISION_RETRIES = 5;
+
     private final PasteRepository pasteRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecureRandom random = new SecureRandom();
 
     @Autowired
     public PasteService(PasteRepository pasteRepository, PasswordEncoder passwordEncoder) {
@@ -30,14 +38,90 @@ public class PasteService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public Optional<PasteDTO> getPasteById(Long id) {
-        Optional<Paste> paste = pasteRepository.findById(id);
-        return paste.map(this::convertToDTO);
+    public PasteDTO createPaste(CreatePasteDTO createDto) {
+        Paste paste = new Paste();
+        paste.setTitle(createDto.getTitle());
+        paste.setContent(createDto.getContent());
+        paste.setExposure(createDto.getExposure() != null ? createDto.getExposure() : Exposure.PUBLIC);
+        paste.setExpirationDate(createDto.getExpirationDate());
+        paste.setLanguage(createDto.getLanguage());
+        paste.setBurnAfterRead(createDto.isBurnAfterRead());
+
+        if (createDto.getPassword() != null && !createDto.getPassword().isBlank()) {
+            paste.setPassword(passwordEncoder.encode(createDto.getPassword()));
+        }
+
+        Paste saved = saveWithUniqueUrl(paste);
+        return convertToDTO(saved);
     }
 
-    public Optional<PasteDTO> getPasteByUrl(String url) {
-        Optional<Paste> paste = pasteRepository.findByUrl(url);
-        return paste.map(this::convertToDTO);
+    public Page<PasteDTO> getAllPastes(Pageable pageable) {
+        return pasteRepository
+                .findVisiblePastes(LocalDateTime.now(), Exposure.PUBLIC, pageable)
+                .map(this::convertToDTO);
+    }
+
+    @Transactional
+    public PasteDTO getPaste(String url, String providedPassword) {
+        Paste paste = pasteRepository.findByUrl(url)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paste not found"));
+
+        if (paste.getExpirationDate() != null && paste.getExpirationDate().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Paste is expired");
+        }
+
+        if (paste.getPassword() != null && !paste.getPassword().isEmpty()) {
+            if (providedPassword == null || !passwordEncoder.matches(providedPassword, paste.getPassword())) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Password required");
+            }
+        }
+
+        PasteDTO dto = convertToDTO(paste);
+        dto.setViews(paste.getViews() + 1);
+
+        if (paste.isBurnAfterRead()) {
+            pasteRepository.delete(paste);
+        } else {
+            pasteRepository.incrementViews(paste.getId());
+        }
+
+        return dto;
+    }
+
+    @Transactional
+    public PasteDTO updatePaste(String url, UpdatePasteDTO dto) {
+        Paste paste = pasteRepository.findByUrl(url)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paste not found"));
+
+        if (paste.getPassword() == null || paste.getPassword().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Paste has no password — updates are not allowed");
+        }
+        if (!passwordEncoder.matches(dto.getPassword(), paste.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password");
+        }
+
+        if (dto.getTitle() != null) paste.setTitle(dto.getTitle());
+        if (dto.getContent() != null) paste.setContent(dto.getContent());
+        if (dto.getExposure() != null) paste.setExposure(dto.getExposure());
+        if (dto.getExpirationDate() != null) paste.setExpirationDate(dto.getExpirationDate());
+        if (dto.getLanguage() != null) paste.setLanguage(dto.getLanguage());
+
+        return convertToDTO(pasteRepository.save(paste));
+    }
+
+    @Transactional
+    public void deletePaste(String url, String providedPassword) {
+        Paste paste = pasteRepository.findByUrl(url)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paste not found"));
+
+        if (paste.getPassword() == null || paste.getPassword().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Paste has no password — cannot be deleted");
+        }
+        if (!passwordEncoder.matches(providedPassword, paste.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong password");
+        }
+
+        pasteRepository.delete(paste);
     }
 
     private PasteDTO convertToDTO(Paste paste) {
@@ -50,83 +134,38 @@ public class PasteService {
         dto.setUpdatedAt(paste.getUpdatedAt());
         dto.setExpirationDate(paste.getExpirationDate());
         dto.setUrl(paste.getUrl());
+        dto.setLanguage(paste.getLanguage());
+        dto.setViews(paste.getViews());
+        dto.setBurnAfterRead(paste.isBurnAfterRead());
         return dto;
     }
 
-    public PasteDTO createPaste(CreatePasteDTO createDto) {
-
-        Paste paste = new Paste();
-        paste.setUpdatedAt(LocalDateTime.now());
-        paste.setCreatedAt(LocalDateTime.now());
-        paste.setExposure(createDto.getExposure() != null ? createDto.getExposure() : Exposure.PUBLIC);
-        paste.setTitle(createDto.getTitle());
-        paste.setPassword(passwordEncoder.encode(createDto.getPassword()));
-        paste.setContent(createDto.getContent());
-        paste.setExposure(createDto.getExposure());
-        paste.setExpirationDate(createDto.getExpirationDate());
-        paste.setUrl(generateShortUrl(paste));
-
-
-        Paste savedPaste = pasteRepository.save(paste);
-        return convertToDTO(savedPaste);
-    }
-
-    public List<PasteDTO> getAllPastes() {
-        LocalDateTime now = LocalDateTime.now();
-
-        List<Paste> pastes =  pasteRepository
-                .findNotExpiredAndPublicPastes(LocalDateTime.now(), Exposure.PUBLIC);
-
-        return pastes.stream().map(this::convertToDTO).collect(Collectors.toList());
-    }
-
-    public PasteDTO getPaste(String url) {
-        LocalDateTime now = LocalDateTime.now();
-        Optional<Paste> optionalPaste = pasteRepository.findByUrl(url);
-
-        if (!optionalPaste.isPresent()) {
-            throw new RuntimeException("Paste not found");
+    private Paste saveWithUniqueUrl(Paste paste) {
+        for (int attempt = 0; attempt < URL_COLLISION_RETRIES; attempt++) {
+            paste.setUrl(generateShortUrl(paste));
+            try {
+                return pasteRepository.saveAndFlush(paste);
+            } catch (DataIntegrityViolationException ignored) {
+                // url collision; regenerate and retry
+            }
         }
-
-        Paste paste = optionalPaste.get();
-        if (paste.getExpirationDate() != null && paste.getExpirationDate().isBefore(now)) {
-            throw new RuntimeException("Paste is expired");
-        }
-
-        return this.convertToDTO(paste);
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not generate a unique URL");
     }
-
-    @Transactional
-    public void deletePaste(String url, String providedPassword) {
-        Optional<Paste> optionalPaste = pasteRepository.findByUrl(url);
-
-        if (optionalPaste.isEmpty()) {
-            throw new RuntimeException("Paste not found");
-        }
-
-        Paste paste = optionalPaste.get();
-        if (!passwordEncoder.matches(providedPassword, paste.getPassword())) {
-            throw new RuntimeException("Wrong password");
-        }
-
-        pasteRepository.delete(paste);
-    }
-
-
 
     private String generateShortUrl(Paste paste) {
-        String originalString = paste.getTitle() + paste.getContent() + LocalDateTime.now();
+        byte[] salt = new byte[8];
+        random.nextBytes(salt);
+        String input = paste.getTitle() + paste.getContent() + LocalDateTime.now() + new String(salt);
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(originalString.getBytes());
-            byte[] digest = md.digest();
+            byte[] digest = md.digest(input.getBytes());
             StringBuilder sb = new StringBuilder();
             for (byte b : digest) {
                 sb.append(String.format("%02x", b));
             }
-            return sb.substring(0, 10);
+            return sb.substring(0, URL_LENGTH);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Failed to generate URL", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate URL", e);
         }
     }
 }
