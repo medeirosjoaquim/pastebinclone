@@ -7,13 +7,14 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
-public class CreatePasteDTO {
+public class UpdatePasteDTO {
 
     @NotBlank
+    private String password;
+
     @Size(max = 255)
     private String title;
 
-    @NotBlank
     @Size(max = 1_000_000)
     private String content;
 
@@ -25,10 +26,13 @@ public class CreatePasteDTO {
     @Size(max = 64)
     private String language;
 
-    private boolean burnAfterRead;
+    public String getPassword() {
+        return password;
+    }
 
-    @Size(max = 255)
-    private String password;
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
     public String getTitle() {
         return title;
@@ -68,21 +72,5 @@ public class CreatePasteDTO {
 
     public void setLanguage(String language) {
         this.language = language;
-    }
-
-    public boolean isBurnAfterRead() {
-        return burnAfterRead;
-    }
-
-    public void setBurnAfterRead(boolean burnAfterRead) {
-        this.burnAfterRead = burnAfterRead;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 }

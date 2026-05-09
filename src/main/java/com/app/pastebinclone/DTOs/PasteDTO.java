@@ -9,6 +9,9 @@ public class PasteDTO {
     private String title;
     private String content;
     private Exposure exposure;
+    private String language;
+    private long views;
+    private boolean burnAfterRead;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -47,6 +50,30 @@ public class PasteDTO {
         this.exposure = exposure;
     }
 
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public long getViews() {
+        return views;
+    }
+
+    public void setViews(long views) {
+        this.views = views;
+    }
+
+    public boolean isBurnAfterRead() {
+        return burnAfterRead;
+    }
+
+    public void setBurnAfterRead(boolean burnAfterRead) {
+        this.burnAfterRead = burnAfterRead;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -78,5 +105,4 @@ public class PasteDTO {
     public void setUrl(String url) {
         this.url = url;
     }
-
 }

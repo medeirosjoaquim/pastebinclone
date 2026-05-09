@@ -1,7 +1,13 @@
 package com.app.pastebinclone.DTOs;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class DeletePasteDTO {
+
+    @NotBlank
     private String url;
+
+    @NotBlank
     private String password;
 
     public String getUrl() {
