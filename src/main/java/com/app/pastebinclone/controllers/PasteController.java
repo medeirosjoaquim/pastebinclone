@@ -3,23 +3,24 @@ package com.app.pastebinclone.controllers;
 import com.app.pastebinclone.DTOs.CreatePasteDTO;
 import com.app.pastebinclone.DTOs.DeletePasteDTO;
 import com.app.pastebinclone.DTOs.PasteDTO;
-import com.app.pastebinclone.models.ErrorResponse;
+import com.app.pastebinclone.DTOs.UpdatePasteDTO;
 import com.app.pastebinclone.services.PasteService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
 @RequestMapping("/pastes")
 public class PasteController {
+
+    private static final String PASSWORD_HEADER = "X-Paste-Password";
 
     private final PasteService pasteService;
 
@@ -28,44 +29,42 @@ public class PasteController {
         this.pasteService = pasteService;
     }
 
-
-    @ExceptionHandler(ResponseStatusException.class)
-
     @PostMapping
-    public ResponseEntity<Object> createPaste(@RequestBody CreatePasteDTO createPasteDTO) {
-        try {
-            PasteDTO newPaste = pasteService.createPaste(createPasteDTO);
-            return ResponseEntity.ok(newPaste);
-        } catch (Exception ex) {
-
-            ErrorResponse errorResponse = new ErrorResponse(
-                    LocalDateTime.now(),
-                    ex.getMessage()
-            );
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+    public ResponseEntity<PasteDTO> createPaste(@Valid @RequestBody CreatePasteDTO createPasteDTO) {
+        return ResponseEntity.ok(pasteService.createPaste(createPasteDTO));
     }
 
-
     @GetMapping
-    public ResponseEntity<List<PasteDTO>> getAllPastes() {
-        List<PasteDTO> pastes = pasteService.getAllPastes();
-        return ResponseEntity.ok(pastes);
+    public ResponseEntity<Page<PasteDTO>> getAllPastes(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(pasteService.getAllPastes(pageable));
     }
 
     @GetMapping("/{url}")
-    public ResponseEntity<PasteDTO> getPasteById(@PathVariable String url) {
-        Optional<PasteDTO> pasteDto = pasteService.getPasteByUrl(url);
-        return pasteDto.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-    @DeleteMapping
-    public ResponseEntity<?> deletePaste(@RequestBody DeletePasteDTO deletePasteDTO) {
-        try {
-            pasteService.deletePaste(deletePasteDTO.getUrl(), deletePasteDTO.getPassword());
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<PasteDTO> getPasteByUrl(
+            @PathVariable String url,
+            @RequestHeader(value = PASSWORD_HEADER, required = false) String password) {
+        return ResponseEntity.ok(pasteService.getPaste(url, password));
     }
 
+    @GetMapping(value = "/{url}/raw", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> getPasteRaw(
+            @PathVariable String url,
+            @RequestHeader(value = PASSWORD_HEADER, required = false) String password) {
+        PasteDTO dto = pasteService.getPaste(url, password);
+        return ResponseEntity.ok(dto.getContent());
+    }
+
+    @PutMapping("/{url}")
+    public ResponseEntity<PasteDTO> updatePaste(
+            @PathVariable String url,
+            @Valid @RequestBody UpdatePasteDTO updatePasteDTO) {
+        return ResponseEntity.ok(pasteService.updatePaste(url, updatePasteDTO));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deletePaste(@Valid @RequestBody DeletePasteDTO deletePasteDTO) {
+        pasteService.deletePaste(deletePasteDTO.getUrl(), deletePasteDTO.getPassword());
+        return ResponseEntity.noContent().build();
+    }
 }
